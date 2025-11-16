@@ -83,8 +83,25 @@ class ImprovedEmotionAnalyzer:
             self.emotion_colors_data = {}
     
     def _load_text_model(self):
-        """텍스트 감정 분석 모델 로드 (acdt_model_v1 기반)"""
+        """텍스트 감정 분석 모델 로드"""
         try:
+            # 캐시 파일 경로
+            cache_dir = os.path.dirname(__file__)
+            cache_file = os.path.join(cache_dir, 'model_cache.pkl')
+            
+            # 캐시된 모델이 있으면 로드
+            if os.path.exists(cache_file):
+                try:
+                    with open(cache_file, 'rb') as f:
+                        cached_data = pickle.load(f)
+                        self.text_model = cached_data.get('text_model')
+                        self.text_vectorizer = cached_data.get('text_vectorizer')
+                        if self.text_model and self.text_vectorizer:
+                            print("✅ 캐시된 텍스트 모델 로드 완료!")
+                            return
+                except Exception as e:
+                    print(f"⚠️ 캐시 로드 실패: {e}, 새로 학습합니다...")
+            
             # 데이터셋 로드
             csv_path = os.path.join(os.path.dirname(__file__), 'emotion_sentimen_dataset.csv')
             
@@ -156,6 +173,18 @@ class ImprovedEmotionAnalyzer:
             accuracy = accuracy_score(y_test, y_pred)
             print(f"📊 텍스트 모델 정확도: {accuracy * 100:.2f}%")
             
+            # 모델 학습 후 캐시 저장
+            try:
+                cache_data = {
+                    'text_model': self.text_model,
+                    'text_vectorizer': self.text_vectorizer
+                }
+                with open(cache_file, 'wb') as f:
+                    pickle.dump(cache_data, f)
+                print("💾 모델을 캐시에 저장했습니다.")
+            except Exception as e:
+                print(f"⚠️ 캐시 저장 실패: {e}")
+            
         except Exception as e:
             print(f"❌ 텍스트 모델 로딩 실패: {e}")
             self.text_model = None
@@ -164,6 +193,23 @@ class ImprovedEmotionAnalyzer:
     def _load_color_model(self):
         """색상 기반 감정 예측 모델 로드 (colorchoosing.py 기반)"""
         try:
+            # 캐시 파일 경로
+            cache_dir = os.path.dirname(__file__)
+            cache_file = os.path.join(cache_dir, 'model_cache.pkl')
+            
+            # 캐시된 모델이 있으면 로드
+            if os.path.exists(cache_file):
+                try:
+                    with open(cache_file, 'rb') as f:
+                        cached_data = pickle.load(f)
+                        self.color_model = cached_data.get('color_model')
+                        self.color_encoder = cached_data.get('color_encoder')
+                        if self.color_model and self.color_encoder:
+                            print("✅ 캐시된 색상 모델 로드 완료!")
+                            return
+                except Exception as e:
+                    print(f"⚠️ 색상 모델 캐시 로드 실패: {e}")
+            
             # HSV 색상 데이터셋 로드 (your_file_name.csv)
             csv_path = os.path.join(os.path.dirname(__file__), 'your_file_name.csv')
             
@@ -196,6 +242,23 @@ class ImprovedEmotionAnalyzer:
             y_pred = self.color_model.predict(X_test)
             accuracy = accuracy_score(y_test, y_pred)
             print(f"🎯 색상 모델 정확도: {accuracy * 100:.2f}%")
+            
+            # 모델 학습 후 캐시 저장
+            try:
+                with open(cache_file, 'rb') as f:
+                    cache_data = pickle.load(f)
+            except:
+                cache_data = {}
+            
+            cache_data['color_model'] = self.color_model
+            cache_data['color_encoder'] = self.color_encoder
+            
+            try:
+                with open(cache_file, 'wb') as f:
+                    pickle.dump(cache_data, f)
+                print("💾 색상 모델을 캐시에 저장했습니다.")
+            except Exception as e:
+                print(f"⚠️ 색상 모델 캐시 저장 실패: {e}")
             
         except Exception as e:
             print(f"❌ 색상 모델 로딩 실패: {e}")
