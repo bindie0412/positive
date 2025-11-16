@@ -25,6 +25,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import LabelEncoder
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+import os
 
 # ==============================================================================
 # PART 1: TEXT-TO-EMOTION MODEL (from acdt_model_v1_text_to_emotion.py)
@@ -36,7 +37,7 @@ print("--- Initializing Text-to-Emotion Model ---")
 # Note: Please ensure 'emotion_sentimen_dataset.csv' is in the same directory
 # or provide the full path to the file.
 try:
-    text_emotion_df = pd.read_csv('emotion_sentimen_dataset.csv', encoding='latin1', on_bad_lines='skip')
+    text_emotion_df = pd.read_csv('./emotion_sentimen_dataset.csv', encoding='latin1', on_bad_lines='skip')
 except FileNotFoundError:
     print("Error: 'emotion_sentimen_dataset.csv' not found.")
     print("Please make sure the dataset for the text-to-emotion model is available.")
@@ -92,13 +93,6 @@ print("Training the text-to-emotion model...")
 text_emotion_model.fit(X_train_tfidf, y_train_text)
 print("Text-to-emotion model training complete.")
 
-# --- 1.7. Prediction Function for Text ---
-def predict_emotion_from_text(diary_entry):
-    cleaned_text = clean_text(diary_entry)
-    text_vector = tfidf_vectorizer.transform([cleaned_text])
-    prediction = text_emotion_model.predict(text_vector)
-    return prediction[0]
-
 # ==============================================================================
 # PART 2: EMOTION-TO-COLOR RECOMMENDATION MODEL (from colorchoosing.py)
 # ==============================================================================
@@ -147,81 +141,155 @@ def to_dark_calm_hsv(hsv_color):
     dark_v = max(0.2, min(0.6, v * 0.6))
     return (h, dark_s, dark_v)
 
+def hsv_to_hex(hsv_color):
+    """HSV 색상을 HEX 코드 문자열로 변환"""
+    rgb = colorsys.hsv_to_rgb(*hsv_color)
+    hex_color = '#{:02x}{:02x}{:02x}'.format(
+        int(rgb[0] * 255),
+        int(rgb[1] * 255),
+        int(rgb[2] * 255)
+    )
+    return hex_color.upper()
+
 # ==============================================================================
-# PART 3: COMBINED WORKFLOW
+# PART 3: COMBINED WORKFLOW - MAIN FUNCTION
 # ==============================================================================
 
-# --- 3.1. User Input for Diary Entry ---
-diary_entry = input("\nPlease enter your diary entry: ")
+def analyze_emotion_and_color(diary_entry, show_visualization=False):
+    """
+    일기 텍스트를 분석하여 감정과 배경색을 추천하는 함수
+    
+    Args:
+        diary_entry (str): 분석할 일기 텍스트
+        show_visualization (bool): 시각화 여부 (기본값: False)
+    
+    Returns:
+        dict: {'emotion': str, 'color_hex': str, 'color_name': str, 'tone': str}
+    """
+    
+    # --- 3.1. Predict Emotion from Text ---
+    cleaned_text = clean_text(diary_entry)
+    text_vector = tfidf_vectorizer.transform([cleaned_text])
+    predicted_emotion = text_emotion_model.predict(text_vector)[0]
+    
+    print(f"감정 분석 결과: {predicted_emotion}")
+    
+    # --- 3.2. Recommend Color Based on Emotion ---
+    try:
+        selected_encoded_label = color_label_encoder.transform([predicted_emotion])[0]
 
-# --- 3.2. Predict Emotion from Text ---
-predicted_emotion = predict_emotion_from_text(diary_entry)
-print(f"\nPredicted Emotion: {predicted_emotion}")
+        # Filter training data for samples the model predicts as the selected emotion
+        y_train_pred_color = color_recommendation_model.predict(X_train_color)
+        filtered_indices = np.where(y_train_pred_color == selected_encoded_label)[0]
 
-# --- 3.3. Recommend Color Based on Emotion ---
-try:
-    selected_encoded_label = color_label_encoder.transform([predicted_emotion])[0]
+        if len(filtered_indices) > 0:
+            # Randomly select one of the filtered samples
+            random_index = np.random.choice(filtered_indices)
+            selected_hsv_color = tuple(X_train_color.iloc[random_index].values)
+        else:
+            # Fallback to predefined colors if no samples are found
+            print(f"경고: '{predicted_emotion}' 감정에 대한 학습 데이터가 없습니다. 기본 색상을 사용합니다.")
+            emotion_colors_hsv = {
+                'Anger': (0.0, 0.8, 0.7), 'Disgust': (0.33, 0.7, 0.6),
+                'Fear': (0.67, 0.8, 0.5), 'Happiness': (0.17, 0.7, 0.8),
+                'Sadness': (0.6, 0.5, 0.4), 'Surprise': (0.5, 0.6, 0.9)
+            }
+            selected_hsv_color = emotion_colors_hsv.get(predicted_emotion, (0.5, 0.5, 0.8))
 
-    # Filter training data for samples the model predicts as the selected emotion
-    y_train_pred_color = color_recommendation_model.predict(X_train_color)
-    filtered_indices = np.where(y_train_pred_color == selected_encoded_label)[0]
-
-    if len(filtered_indices) > 0:
-        # Randomly select one of the filtered samples
-        random_index = np.random.choice(filtered_indices)
-        selected_hsv_color = tuple(X_train_color.iloc[random_index].values)
-    else:
-        # Fallback to predefined colors if no samples are found
-        print(f"Warning: No training samples were predicted as '{predicted_emotion}'. Using a predefined color.")
+    except ValueError:
+        print(f"경고: '{predicted_emotion}' 감정이 색상 모델 학습 데이터에 없습니다. 기본 색상을 사용합니다.")
         emotion_colors_hsv = {
             'Anger': (0.0, 0.8, 0.7), 'Disgust': (0.33, 0.7, 0.6),
             'Fear': (0.67, 0.8, 0.5), 'Happiness': (0.17, 0.7, 0.8),
             'Sadness': (0.6, 0.5, 0.4), 'Surprise': (0.5, 0.6, 0.9)
         }
-        selected_hsv_color = emotion_colors_hsv.get(predicted_emotion, (0.5, 0.5, 0.8)) # Default color if emotion is not in the map
+        selected_hsv_color = emotion_colors_hsv.get(predicted_emotion, (0.5, 0.5, 0.8))
 
-except ValueError:
-    print(f"Warning: The emotion '{predicted_emotion}' was not found in the color model's training data. Using a predefined color.")
-    emotion_colors_hsv = {
-        'Anger': (0.0, 0.8, 0.7), 'Disgust': (0.33, 0.7, 0.6),
-        'Fear': (0.67, 0.8, 0.5), 'Happiness': (0.17, 0.7, 0.8),
-        'Sadness': (0.6, 0.5, 0.4), 'Surprise': (0.5, 0.6, 0.9)
+    # --- 3.3. Adjust Color Tone Based on Emotion ---
+    negative_emotions = ['Anger', 'Disgust', 'Fear', 'Sadness']
+    if predicted_emotion in negative_emotions:
+        corrected_hsv_color = to_dark_calm_hsv(selected_hsv_color)
+        tone_label = '차분하고 어두운 톤'
+    else:
+        corrected_hsv_color = to_bright_pastel_hsv(selected_hsv_color)
+        tone_label = '밝고 파스텔 톤'
+
+    # --- 3.4. Convert to HEX color code ---
+    color_hex = hsv_to_hex(corrected_hsv_color)
+    
+    # --- 3.5. Get color name based on emotion ---
+    emotion_color_names = {
+        'Anger': '진한 빨강', 'Disgust': '황록색', 'Fear': '밤색',
+        'Happiness': '황금색', 'Sadness': '파란색', 'Surprise': '보라색'
     }
-    selected_hsv_color = emotion_colors_hsv.get(predicted_emotion, (0.5, 0.5, 0.8))
+    color_name = emotion_color_names.get(predicted_emotion, '중립 회색')
 
+    result = {
+        'emotion': predicted_emotion,
+        'color_hex': color_hex,
+        'color_name': color_name,
+        'tone': tone_label
+    }
+    
+    # --- 3.6. Visualization (Optional) ---
+    if show_visualization:
+        original_rgb = colorsys.hsv_to_rgb(*selected_hsv_color)
+        corrected_rgb = colorsys.hsv_to_rgb(*corrected_hsv_color)
+        
+        print(f"원본 추천 HSV 색상: {selected_hsv_color}")
+        print(f"조정된 HSV 색상 ({tone_label}): {corrected_hsv_color}")
+        
+        # Visualization
+        fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+        
+        # Original Color
+        ax[0].add_patch(patches.Rectangle((0, 0), 1, 1, facecolor=original_rgb))
+        ax[0].set_title('원본 추천 색상', fontsize=14)
+        ax[0].axis('off')
+        ax[0].text(0.5, 0.5, f'RGB: ({original_rgb[0]:.2f}, {original_rgb[1]:.2f}, {original_rgb[2]:.2f})',
+                   color='white' if sum(original_rgb)/3 < 0.5 else 'black', ha='center', va='center', fontsize=12)
+        
+        # Corrected Color
+        ax[1].add_patch(patches.Rectangle((0, 0), 1, 1, facecolor=corrected_rgb))
+        ax[1].set_title(f'조정된 색상: {tone_label}', fontsize=14)
+        ax[1].axis('off')
+        ax[1].text(0.5, 0.5, f'HEX: {color_hex}\n{color_name}',
+                   color='white' if sum(corrected_rgb)/3 < 0.5 else 'black', ha='center', va='center', fontsize=12)
+        
+        plt.suptitle(f'감정: {predicted_emotion}', fontsize=16)
+        plt.tight_layout()
+        plt.show()
+    
+    return result
 
-# --- 3.4. Adjust Color Tone Based on Emotion ---
-negative_emotions = ['Anger', 'Disgust', 'Fear', 'Sadness']
-if predicted_emotion in negative_emotions:
-    corrected_hsv_color = to_dark_calm_hsv(selected_hsv_color)
-    tone_label = 'Dark & Calm Tone'
-else:
-    corrected_hsv_color = to_bright_pastel_hsv(selected_hsv_color)
-    tone_label = 'Bright Pastel Tone'
+# ==============================================================================
+# EXAMPLE USAGE (Remove or comment out for production use)
+# ==============================================================================
 
-# --- 3.5. Convert Colors to RGB and Visualize ---
-original_rgb = colorsys.hsv_to_rgb(*selected_hsv_color)
-corrected_rgb = colorsys.hsv_to_rgb(*corrected_hsv_color)
-
-print(f"Original Recommended HSV Color: {selected_hsv_color}")
-print(f"Adjusted HSV Color for {tone_label}: {corrected_hsv_color}")
-
-# Visualization
-fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-
-# Original Color
-ax[0].add_patch(patches.Rectangle((0, 0), 1, 1, facecolor=original_rgb))
-ax[0].set_title('Original Recommended Color')
-ax[0].axis('off')
-ax[0].text(0.5, 0.5, f'RGB: ({original_rgb[0]:.2f}, {original_rgb[1]:.2f}, {original_rgb[2]:.2f})',
-           color='white' if sum(original_rgb)/3 < 0.5 else 'black', ha='center', va='center')
-
-# Corrected Color
-ax[1].add_patch(patches.Rectangle((0, 0), 1, 1, facecolor=corrected_rgb))
-ax[1].set_title(f'Adjusted Color: {tone_label}')
-ax[1].axis('off')
-ax[1].text(0.5, 0.5, f'RGB: ({corrected_rgb[0]:.2f}, {corrected_rgb[1]:.2f}, {corrected_rgb[2]:.2f})',
-           color='white' if sum(corrected_rgb)/3 < 0.5 else 'black', ha='center', va='center')
-
-plt.suptitle(f'Color Recommendation for Emotion: {predicted_emotion}', fontsize=16)
-plt.show()
+# if __name__ == "__main__":
+#     # 사용 예시
+#     print("=== 감정 분석 및 색상 추천 시스템 ===")
+#     print("일기 내용을 입력하면 감정을 분석하고 적절한 배경색을 추천합니다.\n")
+#     
+#     while True:
+#         diary_entry = input("일기 내용을 입력하세요 (종료하려면 'quit' 입력): ")
+#         
+#         if diary_entry.lower() == 'quit':
+#             print("시스템을 종료합니다.")
+#             break
+#             
+#         if not diary_entry.strip():
+#             print("내용을 입력해주세요.\n")
+#             continue
+#         
+#         # 감정과 색상 분석
+#         result = analyze_emotion_and_color(diary_entry, show_visualization=True)
+#         
+#         # 결과 출력
+#         print("\n=== 분석 결과 ===")
+#         print(f"감정: {result['emotion']}")
+#         print(f"추천 배경색: {result['color_name']}")
+#         print(f"색상 코드: {result['color_hex']}")
+#         print(f"톤 스타일: {result['tone']}")
+#         print("-" * 50)
+#         print()

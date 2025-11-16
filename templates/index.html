@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>나의 일기장</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+        
+        header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .write-section, .list-section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+        }
+        
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 1em;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 200px;
+        }
+        
+        .btn-save {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .diary-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .diary-item {
+            background: #f9f9f9;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .diary-item:hover {
+            background: #f0f0f0;
+            transform: translateX(5px);
+        }
+        
+        .diary-item-title {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .diary-item-preview {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        
+        .diary-item-date {
+            font-size: 0.85em;
+            color: #999;
+            margin-bottom: 8px;
+        }
+        
+        .diary-btn-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-delete {
+            padding: 5px 10px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+        
+        .btn-delete:hover {
+            background: #ff5252;
+        }
+        
+        .empty-message {
+            text-align: center;
+            color: #999;
+            padding: 40px 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📔 나의 일기장</h1>
+        </header>
+
+        <div class="main-content">
+            <div class="write-section">
+                <h2>✍️ 새 일기 작성</h2>
+                <form id="diaryForm">
+                    <div class="form-group">
+                        <label for="diaryDate">날짜</label>
+                        <input type="date" id="diaryDate" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="diaryTitle">제목</label>
+                        <input type="text" id="diaryTitle" placeholder="제목을 입력하세요" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="diaryContent">내용</label>
+                        <textarea id="diaryContent" placeholder="당신의 이야기를 자유롭게 작성하세요..." required></textarea>
+                    </div>
+
+                    <button type="submit" class="btn-save">💾 저장하기</button>
+                </form>
+            </div>
+
+            <div class="list-section">
+                <h2>📋 내 일기들</h2>
+                
+                <!-- 검색, 정렬, 필터 컨트롤 -->
+                <div style="margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        placeholder="제목이나 내용으로 검색..."
+                        style="padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1em;"
+                    >
+                    
+                    <select 
+                        id="emotionFilter" 
+                        style="padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1em; cursor: pointer;"
+                    >
+                        <option value="">📊 모든 감정</option>
+                        <option value="Happiness">😊 행복</option>
+                        <option value="Sadness">😢 슬픔</option>
+                        <option value="Anger">😠 분노</option>
+                        <option value="Fear">😨 공포</option>
+                        <option value="Disgust">🤢 혐오</option>
+                        <option value="Surprise">😲 놀람</option>
+                    </select>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <button id="sortBtn" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">📅 최신순 ▼</button>
+                </div>
+                
+                <div id="diaryList" class="diary-list">
+                    <p class="empty-message">작성된 일기가 없습니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 상태 변수
+        let allDiaries = [];
+        let sortOrder = 'newest'; // 'newest' or 'oldest'
+
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            // 오늘 날짜 자동 설정
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('diaryDate').value = today;
+            
+            // 일기 목록 로드
+            loadDiaries();
+            
+            // 폼 제출 이벤트
+            document.getElementById('diaryForm').addEventListener('submit', handleFormSubmit);
+            
+            // 검색 이벤트
+            document.getElementById('searchInput').addEventListener('input', filterAndDisplayDiaries);
+            
+            // 감정 필터 이벤트
+            document.getElementById('emotionFilter').addEventListener('change', filterAndDisplayDiaries);
+            
+            // 정렬 버튼 이벤트
+            document.getElementById('sortBtn').addEventListener('click', toggleSort);
+        });
+        
+        function loadDiaries() {
+            console.log('일기 목록을 불러옵니다...');
+            fetch('/api/diaries')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('받은 데이터:', data);
+                    allDiaries = Array.isArray(data) ? data : [];
+                    filterAndDisplayDiaries();
+                })
+                .catch(error => {
+                    console.error('일기 로드 오류:', error);
+                    document.getElementById('diaryList').innerHTML = '<div class="empty-message">일기를 불러올 수 없습니다.</div>';
+                });
+        }
+        
+        function filterAndDisplayDiaries() {
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
+            const emotionFilter = document.getElementById('emotionFilter').value;
+            
+            // 필터 적용
+            let filtered = allDiaries.filter(diary => {
+                const matchSearch = !searchText || 
+                    diary.title.toLowerCase().includes(searchText) ||
+                    diary.content.toLowerCase().includes(searchText);
+                
+                const matchEmotion = !emotionFilter || diary.emotion === emotionFilter;
+                
+                return matchSearch && matchEmotion;
+            });
+            
+            // 정렬 적용
+            filtered.sort((a, b) => {
+                const dateA = new Date(a.created_at);
+                const dateB = new Date(b.created_at);
+                return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+            });
+            
+            // 화면에 표시
+            displayDiaries(filtered);
+        }
+        
+        function displayDiaries(diaries) {
+            const diaryList = document.getElementById('diaryList');
+            
+            if (!diaries || diaries.length === 0) {
+                diaryList.innerHTML = '<div class="empty-message">일기가 없습니다.</div>';
+                return;
+            }
+            
+            diaryList.innerHTML = diaries.map(diary => `
+                <div class="diary-item" style="border-left-color: ${diary.color_hex || '#667eea'}; cursor: pointer;" onclick="openDiary(${diary.id})">
+                    <div class="diary-item-title">${diary.title || '제목 없음'}</div>
+                    <div class="diary-item-date">📅 ${diary.date}</div>
+                    ${diary.emotion ? `<div style="font-size: 0.9em; color: ${diary.color_hex}; font-weight: bold; margin-bottom: 8px;">💭 감정: ${diary.emotion}</div>` : ''}
+                    <div class="diary-item-preview">${diary.content.substring(0, 100)}...</div>
+                    <div class="diary-btn-group">
+                        <button type="button" class="btn-delete" onclick="deleteDiary(event, ${diary.id})">🗑️ 삭제</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function toggleSort() {
+            sortOrder = sortOrder === 'newest' ? 'oldest' : 'newest';
+            const btn = document.getElementById('sortBtn');
+            btn.textContent = sortOrder === 'newest' ? '📅 최신순 ▼' : '📅 오래된순 ▲';
+            filterAndDisplayDiaries();
+        }
+        
+        function openDiary(diaryId) {
+            window.location.href = `/read-diary?id=${diaryId}`;
+        }
+        
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const date = document.getElementById('diaryDate').value;
+            const title = document.getElementById('diaryTitle').value;
+            const content = document.getElementById('diaryContent').value;
+            
+            const diaryData = {
+                date: date,
+                title: title,
+                content: content
+            };
+            
+            console.log('일기 저장 중:', diaryData);
+            
+            fetch('/api/save-diary', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(diaryData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('저장 결과:', data);
+                
+                // 감정 분석 결과 표시
+                if (data.emotion) {
+                    const emotionHtml = `
+                        <div style="background: #f0f8ff; padding: 15px; border-radius: 10px; border-left: 4px solid ${data.color_hex}; margin-top: 15px;">
+                            <div style="font-weight: bold; color: #333; margin-bottom: 8px;">🤖 AI 감정 분석 결과</div>
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <div style="flex: 1;">
+                                    <div style="margin-bottom: 5px;"><strong>감정:</strong> <span style="color: ${data.color_hex}; font-size: 1.1em;">${data.emotion}</span></div>
+                                    <div><strong>색상:</strong> ${data.color_name} (${data.color_hex})</div>
+                                </div>
+                                <div style="width: 50px; height: 50px; background: ${data.color_hex}; border-radius: 10px;"></div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // 결과를 폼 아래에 임시로 표시
+                    const resultDiv = document.createElement('div');
+                    resultDiv.innerHTML = emotionHtml;
+                    document.getElementById('diaryForm').parentNode.insertBefore(resultDiv, document.getElementById('diaryForm').nextSibling);
+                    
+                    // 3초 후 제거
+                    setTimeout(() => resultDiv.remove(), 3000);
+                }
+                
+                alert(`✅ 일기가 저장되었습니다!${data.emotion ? '\n감정: ' + data.emotion : ''}`);
+                document.getElementById('diaryForm').reset();
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('diaryDate').value = today;
+                loadDiaries();
+            })
+            .catch(error => {
+                console.error('일기 저장 오류:', error);
+                alert('❌ 일기 저장에 실패했습니다.');
+            });
+        }
+        
+        function deleteDiary(event, id) {
+            // 이벤트 전파 방지 (일기 열기와 동시에 삭제 방지)
+            event.stopPropagation();
+            
+            if (!confirm('정말 이 일기를 삭제하시겠습니까?')) return;
+            
+            console.log('🗑️ 삭제 요청:', id, '타입:', typeof id);
+            
+            fetch('/api/delete-diary', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ id: id })
+            })
+            .then(response => {
+                console.log('📡 서버 응답 상태:', response.status);
+                return response.json().then(data => {
+                    if (!response.ok) {
+                        throw new Error(data.error || `HTTP ${response.status}`);
+                    }
+                    return data;
+                });
+            })
+            .then(data => {
+                console.log('✅ 삭제 성공:', data);
+                alert('🗑️ 일기가 삭제되었습니다.');
+                loadDiaries();
+            })
+            .catch(error => {
+                console.error('❌ 삭제 실패:', error);
+                alert(`❌ 일기 삭제에 실패했습니다.\n오류: ${error.message}`);
+            });
+        }
+    </script>
+</body>
+</html>
