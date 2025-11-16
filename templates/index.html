@@ -24,14 +24,16 @@
             padding: 15px; 
             margin-bottom: 15px; 
             border-radius: 10px; 
-            border-left: 6px solid #667eea;
+            border-left: 12px solid var(--theme-color); /* 더 두꺼운 테마색 테두리 */
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); /* 약간의 그림자 추가 */
         }
         .diary-item:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15); /* 더 강한 그림자 */
+            border-left-width: 14px; /* 호버 시 더 두꺼운 테두리 */
         }
         .diary-item::before {
             content: '';
@@ -39,8 +41,19 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 4px;
+            height: 6px; /* 상단 그라데이션 바 */
             background: linear-gradient(90deg, var(--theme-color), var(--theme-color-light));
+            opacity: 0.8; /* 약간 투명하게 */
+        }
+        .diary-item::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px; /* 하단 라인 */
+            background: var(--theme-color);
+            opacity: 0.4; /* 더 투명하게 */
         }
         .diary-item-title { 
             font-size: 1.1em; 
