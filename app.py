@@ -13,20 +13,41 @@ import time
 # our_model 폴더의 improved_emotion_model.py에서 함수 임포트
 sys.path.append(os.path.join(os.path.dirname(__file__), 'our_model'))
 
-try:
-    from improved_emotion_model import analyze_emotion_and_color
-    AI_MODEL_AVAILABLE = True
-    print("🤖 개선된 AI 모델 로딩 성공!")
-except Exception as e:
-    print(f"❌ 개선된 AI 모델 로딩 실패: {e}")
-    # 폴백: 기존 simple_emotion_model 사용
+# ============================================================
+# 모델 선택 설정
+# ============================================================
+# 환경 변수로 모델 선택 제어
+# 사용법:
+#   - improved 모델 사용: python app.py (기본값)
+#   - simple 모델 사용: USE_IMPROVED_MODEL=false python app.py
+# ============================================================
+
+USE_IMPROVED_MODEL = os.getenv('USE_IMPROVED_MODEL', 'true').lower() in ('true', '1', 'yes')
+
+if USE_IMPROVED_MODEL:
     try:
-        from simple_emotion_model import analyze_emotion_and_color as fallback_analyze
-        analyze_emotion_and_color = fallback_analyze
+        from improved_emotion_model import analyze_emotion_and_color
         AI_MODEL_AVAILABLE = True
-        print("🔄 폴백 모델 사용")
-    except Exception as e2:
-        print(f"❌ 폴백 모델도 실패: {e2}")
+        print("🤖 개선된 AI 모델 로딩 성공!")
+    except Exception as e:
+        print(f"❌ 개선된 AI 모델 로딩 실패: {e}")
+        # 폴백: 기존 simple_emotion_model 사용
+        try:
+            from simple_emotion_model import analyze_emotion_and_color as fallback_analyze
+            analyze_emotion_and_color = fallback_analyze
+            AI_MODEL_AVAILABLE = True
+            print("🔄 폴백 모델 사용 (simple_emotion_model)")
+        except Exception as e2:
+            print(f"❌ 폴백 모델도 실패: {e2}")
+            AI_MODEL_AVAILABLE = False
+else:
+    # improved 모델을 사용하지 않고 simple 모델 직접 사용
+    try:
+        from simple_emotion_model import analyze_emotion_and_color
+        AI_MODEL_AVAILABLE = True
+        print("📌 기본 모델 사용 (simple_emotion_model)")
+    except Exception as e:
+        print(f"❌ 기본 모델 로딩 실패: {e}")
         AI_MODEL_AVAILABLE = False
 
 app = Flask(__name__)
