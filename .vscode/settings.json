@@ -1,5 +1,6 @@
 {
     "python.analysis.extraPaths": [
         "./our_model"
-    ]
+    ],
+    "python-envs.pythonProjects": []
 }

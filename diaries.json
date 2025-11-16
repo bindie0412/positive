@@ -139,5 +139,17 @@
     "color_name": "회색",
     "tone": "차분하고 어두운 톤",
     "created_at": "2025-11-16 19:38:30"
+  },
+  {
+    "id": 1763303525057,
+    "date": "2025-11-16",
+    "title": "1",
+    "content": "im happy",
+    "mood": "",
+    "emotion": "Happiness",
+    "color_hex": "#f5d393",
+    "color_name": "밝은 색",
+    "tone": "밝고 파스텔 톤",
+    "created_at": "2025-11-16 23:32:05"
   }
 ]
