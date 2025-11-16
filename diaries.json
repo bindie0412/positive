@@ -81,18 +81,6 @@
     "created_at": "2025-11-16 19:22:14"
   },
   {
-    "id": 1763288539757,
-    "date": "2025-11-16",
-    "title": "1",
-    "content": "heard the news about the canceled trip. It’s hard to stay optimistic right now.",
-    "mood": "",
-    "emotion": "",
-    "color_hex": "#667eea",
-    "color_name": "파란색",
-    "tone": "기본 톤",
-    "created_at": "2025-11-16 19:22:19"
-  },
-  {
     "id": 1763288544999,
     "date": "2025-11-16",
     "title": "1",
@@ -127,5 +115,29 @@
     "color_name": "밝은 색",
     "tone": "밝고 파스텔 톤",
     "created_at": "2025-11-16 19:28:38"
+  },
+  {
+    "id": 1763289387048,
+    "date": "2025-11-16",
+    "title": "1",
+    "content": "My old best friend, who moved away years ago, showed up at my door. Total shock!My old best friend, who moved away years ago, showed up at my door. Total shock!My old best friend, who moved away years ago, showed up at my door. Total shock!My old best friend, who moved away years ago, showed up at my door. Total shock!My old best friend, who moved away years ago, showed up at my door. Total shock!My old best friend, who moved away years ago, showed up at my door. Total shock!My old best friend, who moved away years ago, showed up at my door. Total shock!My old best friend, who moved away years ago, showed up at my door. Total shock!",
+    "mood": "",
+    "emotion": "Anger",
+    "color_hex": "#892f2e",
+    "color_name": "중간 톤",
+    "tone": "차분하고 어두운 톤",
+    "created_at": "2025-11-16 19:36:27"
+  },
+  {
+    "id": 1763289510542,
+    "date": "2025-11-16",
+    "title": "2",
+    "content": "Walking home alone after dark always makes me feel so exposed. I kept looking over my shoulder.Walking home alone after dark always makes me feel so exposed. I kept looking over my shoulder.Walking home alone after dark always makes me feel so exposed. I kept looking over my shoulder.",
+    "mood": "",
+    "emotion": "Fear",
+    "color_hex": "#283133",
+    "color_name": "회색",
+    "tone": "차분하고 어두운 톤",
+    "created_at": "2025-11-16 19:38:30"
   }
 ]

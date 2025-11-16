@@ -284,7 +284,7 @@
                 const themeColor = diary.color_hex || '#667eea';
                 const themeColorLight = adjustColorBrightness(themeColor, 0.3);
                 return `
-                <div class="diary-item" style="--theme-color: ${themeColor}; --theme-color-light: ${themeColorLight};">
+                <div class="diary-item" style="--theme-color: ${themeColor}; --theme-color-light: ${themeColorLight};" onclick="goToDiary(${diary.id})">
                     <div class="diary-item-title">${escapeHtml(diary.title)}</div>
                     <div class="diary-item-date">📅 ${diary.date} • 🕐 ${formatTime(diary.created_at)}</div>
                     ${diary.emotion ? `
@@ -299,6 +299,10 @@
                 </div>
                 `;
             }).join('');
+        }
+        
+        function goToDiary(id) {
+            window.location.href = `/diary/${id}`;
         }
         
         function toggleSort() {

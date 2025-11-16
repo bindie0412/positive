@@ -43,7 +43,7 @@ def index():
 @app.route('/diary/<int:diary_id>')
 def diary_detail(diary_id):
     """전체화면 일기 상세 페이지"""
-    return render_template('diary.html')
+    return render_template('diary_viewer.html')
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze_emotion():
