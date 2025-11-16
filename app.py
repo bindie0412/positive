@@ -199,7 +199,7 @@ def get_diary(diary_id):
 if __name__ == '__main__':
     print("=" * 60)
     print("🚀 일기장 웹 서버 시작!")
-    print("📍 주소: http://localhost:5002")
+    print("📍 주소: http://localhost:8080")
     print("📋 API 엔드포인트:")
     print("   - POST /api/analyze          : 감정 분석 및 색상 추천")
     print("   - POST /api/save-diary       : 일기 저장")
@@ -208,4 +208,4 @@ if __name__ == '__main__':
     print(f"🤖 AI 모델 상태: {'활성화' if AI_MODEL_AVAILABLE else '비활성화'}")
     print("=" * 60)
     
-    app.run(host='0.0.0.0', port=5002, debug=True)
+    app.run(host='0.0.0.0', port=8080, debug=False, use_reloader=False)

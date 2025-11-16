@@ -64,34 +64,87 @@ df_clean.dropna(subset=['text', 'label'], inplace=True)
 df_final = df_clean[df_clean['text'] != ""]
 
 # --- 1.3. Label Mapping (excluding 'neutral') ---
+# 원본 모델(acdt_model_v1_text_to_emotion.py)의 매핑 로직 적용
 label_map = {
-    'happiness': 'Happiness', 'fun': 'Happiness', 'enthusiasm': 'Happiness',
-    'relief': 'Happiness', 'love': 'Happiness', 'sadness': 'Sadness',
-    'empty': 'Sadness', 'boredom': 'Sadness', 'anger': 'Anger',
-    'worry': 'Fear', 'hate': 'Disgust', 'surprise': 'Surprise'
+    # 1. joy / Happiness
+    'happiness': 'Happiness',
+    'fun': 'Happiness',
+    'enthusiasm': 'Happiness',
+    'relief': 'Happiness',
+    'love': 'Happiness',
+
+    # 2. sadness / Sadness
+    'sadness': 'Sadness',
+    'empty': 'Sadness',
+    'boredom': 'Sadness',
+
+    # 3. anger / Anger
+    'anger': 'Anger',
+
+    # 4. fear / Fear
+    'worry': 'Fear',
+
+    # 5. disgust / Disgust
+    'hate': 'Disgust',
+
+    # 6. surprise / Surprise
+    'surprise': 'Surprise'
+
+    # 'neutral' 항목은 의도적으로 제외됨
 }
 df_final['label'] = df_final['label'].map(label_map)
+
+# 'neutral' 및 매핑되지 않은 데이터 제거
 df_final = df_final.dropna(subset=['label'])
 
+print("--- 6가지 감정 ('neutral' 제외)으로 정제된 데이터 ---")
+print(df_final['label'].value_counts())
+print("\n" + "="*50 + "\n")
+
 # --- 1.4. Training/Test Data Split ---
+# 원본 모델의 훈련/테스트 데이터 분리 로직 적용
 X_text = df_final['text']
 y_text = df_final['label']
+
+print(f"훈련 데이터 (6개 감정): 전체 샘플 {len(df_final)}개")
+print(f"감정별 분포:\n{y_text.value_counts()}\n")
+
 X_train_text, X_test_text, y_train_text, y_test_text = train_test_split(
-    X_text, y_text, test_size=0.2, random_state=42, stratify=y_text
+    X_text, y_text,
+    test_size=0.2,           # 20%를 테스트 데이터로 사용
+    random_state=42,         # 재현 가능성을 위한 시드
+    stratify=y_text          # 6개 감정 간의 불균형을 맞춤
 )
 
+print(f"훈련 데이터: {len(X_train_text)}개")
+print(f"테스트 데이터: {len(X_test_text)}개\n")
+
 # --- 1.5. TF-IDF Vectorization ---
-tfidf_vectorizer = TfidfVectorizer(max_features=5000, stop_words='english')
+# 영어 불용어 처리 적용 (a, the, is 등 제거)
+tfidf_vectorizer = TfidfVectorizer(
+    max_features=5000,
+    stop_words='english'  # 영어 불용어 자동 제거
+)
 X_train_tfidf = tfidf_vectorizer.fit_transform(X_train_text)
 X_test_tfidf = tfidf_vectorizer.transform(X_test_text)
 
+print(f"TF-IDF 벡터 shape (훈련): {X_train_tfidf.shape}")
+print(f"TF-IDF 벡터 shape (테스트): {X_test_tfidf.shape}\n")
+
 # --- 1.6. Model Training ---
+# 원본 모델의 가중치 균형 처리 적용
 text_emotion_model = LogisticRegression(
-    max_iter=1000, random_state=42, class_weight='balanced'
+    max_iter=1000,
+    random_state=42,
+    class_weight='balanced'  # 감정별 불균형 해결 (joy는 8만, fear는 4천 등)
 )
-print("Training the text-to-emotion model...")
+print("훈련 중 (Text-to-Emotion 모델)...")
 text_emotion_model.fit(X_train_tfidf, y_train_text)
-print("Text-to-emotion model training complete.")
+
+# 모델 성능 평가
+y_pred_text = text_emotion_model.predict(X_test_tfidf)
+text_accuracy = accuracy_score(y_test_text, y_pred_text)
+print(f"✅ Text-to-Emotion 모델 훈련 완료 (정확도: {text_accuracy*100:.2f}%)\n")
 
 # ==============================================================================
 # PART 2: EMOTION-TO-COLOR RECOMMENDATION MODEL (from colorchoosing.py)
