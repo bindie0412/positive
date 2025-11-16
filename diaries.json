@@ -45,39 +45,15 @@
     "created_at": "2025-11-16 18:03:43"
   },
   {
-    "id": 1763286336421,
+    "id": 1763287349615,
     "date": "2025-11-16",
     "title": "1",
-    "content": "I got the job offer! I feel like I could float all the way home.",
+    "content": "I heard the news about the canceled trip. It’s hard to stay optimistic right now.",
     "mood": "",
     "emotion": "",
     "color_hex": "#667eea",
     "color_name": "파란색",
     "tone": "기본 톤",
-    "created_at": "2025-11-16 18:45:36"
-  },
-  {
-    "id": 1763286708593,
-    "date": "2025-11-16",
-    "title": "1",
-    "content": "I got the job offer! I feel like I could float all the way home.",
-    "mood": "",
-    "emotion": "",
-    "color_hex": "#667eea",
-    "color_name": "파란색",
-    "tone": "기본 톤",
-    "created_at": "2025-11-16 18:51:48"
-  },
-  {
-    "id": 1763286730824,
-    "date": "2025-11-16",
-    "title": "12",
-    "content": "sad",
-    "mood": "",
-    "emotion": "",
-    "color_hex": "#667eea",
-    "color_name": "파란색",
-    "tone": "기본 톤",
-    "created_at": "2025-11-16 18:52:10"
+    "created_at": "2025-11-16 19:02:29"
   }
 ]
