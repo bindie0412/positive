@@ -19,12 +19,82 @@
         .btn-save { width: 100%; padding: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: 700; cursor: pointer; }
         .btn-save:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4); }
         .diary-list { max-height: 600px; overflow-y: auto; }
-        .diary-item { background: #f9f9f9; padding: 15px; margin-bottom: 15px; border-radius: 10px; border-left: 4px solid #667eea; }
-        .diary-item-title { font-size: 1.1em; font-weight: 700; color: #333; margin-bottom: 5px; }
-        .diary-item-preview { font-size: 0.9em; color: #666; margin-bottom: 8px; }
-        .diary-item-date { font-size: 0.85em; color: #999; margin-bottom: 8px; }
-        .btn-delete { padding: 5px 10px; background: #ff6b6b; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 0.85em; }
-        .btn-delete:hover { background: #ff5252; }
+        .diary-item { 
+            background: #f9f9f9; 
+            padding: 15px; 
+            margin-bottom: 15px; 
+            border-radius: 10px; 
+            border-left: 6px solid #667eea;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .diary-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .diary-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--theme-color), var(--theme-color-light));
+        }
+        .diary-item-title { 
+            font-size: 1.1em; 
+            font-weight: 700; 
+            color: #333; 
+            margin-bottom: 8px;
+            margin-top: 5px;
+        }
+        .diary-item-preview { 
+            font-size: 0.9em; 
+            color: #666; 
+            margin-bottom: 10px; 
+            line-height: 1.4;
+        }
+        .diary-item-date { 
+            font-size: 0.85em; 
+            color: #999; 
+            margin-bottom: 8px; 
+        }
+        .diary-emotion-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            background: var(--theme-color);
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .diary-color-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--theme-color);
+            border: 2px solid white;
+            box-shadow: 0 0 0 1px var(--theme-color);
+        }
+        .btn-delete { 
+            padding: 5px 10px; 
+            background: #ff6b6b; 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-size: 0.85em;
+            transition: background 0.2s;
+        }
+        .btn-delete:hover { 
+            background: #ff5252; 
+        }
         .empty-message { text-align: center; color: #999; padding: 30px 20px; font-size: 1.1em; }
         #emotionAnalysis { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 4px solid #667eea; }
         #emotionAnalysis h3 { margin-top: 0; color: #333; font-size: 1em; margin-bottom: 10px; }
@@ -154,21 +224,68 @@
             displayDiaries(filtered);
         }
         
+        // 유틸리티 함수들
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function formatTime(datetimeString) {
+            const date = new Date(datetimeString);
+            return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        function getEmotionEmoji(emotion) {
+            const emojiMap = {
+                'Happiness': '😊',
+                'Sadness': '😢',
+                'Fear': '😨',
+                'Anger': '😠',
+                'Surprise': '😲',
+                'Disgust': '🤢',
+                'Neutral': '😐'
+            };
+            return emojiMap[emotion] || '💭';
+        }
+        
+        function adjustColorBrightness(hex, percent) {
+            // hex 색상을 더 밝게 만드는 함수
+            const num = parseInt(hex.replace("#",""), 16);
+            const amt = Math.round(2.55 * percent * 100);
+            const R = (num >> 16) + amt;
+            const G = (num >> 8 & 0x00FF) + amt;
+            const B = (num & 0x0000FF) + amt;
+            return "#" + (0x1000000 + (R<255?R<1?0:R:255)*0x10000 +
+                (G<255?G<1?0:G:255)*0x100 + (B<255?B<1?0:B:255))
+                .toString(16).slice(1);
+        }
+        
         function displayDiaries(diaries) {
             const diaryList = document.getElementById('diaryList');
             if (!diaries || diaries.length === 0) {
                 diaryList.innerHTML = '<p class="empty-message">일기가 없습니다.</p>';
                 return;
             }
-            diaryList.innerHTML = diaries.map(diary => `
-                <div class="diary-item" style="border-left-color: ${diary.color_hex || '#667eea'};">
-                    <div class="diary-item-title">${diary.title}</div>
-                    <div class="diary-item-date">📅 ${diary.date}</div>
-                    ${diary.emotion ? `<div style="font-size: 0.9em; color: ${diary.color_hex}; font-weight: bold;">💭 ${diary.emotion}</div>` : ''}
-                    <div class="diary-item-preview">${diary.content.substring(0, 80)}...</div>
+            diaryList.innerHTML = diaries.map(diary => {
+                const themeColor = diary.color_hex || '#667eea';
+                const themeColorLight = adjustColorBrightness(themeColor, 0.3);
+                return `
+                <div class="diary-item" style="--theme-color: ${themeColor}; --theme-color-light: ${themeColorLight};">
+                    <div class="diary-item-title">${escapeHtml(diary.title)}</div>
+                    <div class="diary-item-date">📅 ${diary.date} • 🕐 ${formatTime(diary.created_at)}</div>
+                    ${diary.emotion ? `
+                        <div class="diary-emotion-tag">
+                            <span class="diary-color-indicator"></span>
+                            💭 ${getEmotionEmoji(diary.emotion)} ${diary.emotion}
+                            ${diary.color_name ? `(${diary.color_name})` : ''}
+                        </div>
+                    ` : ''}
+                    <div class="diary-item-preview">${escapeHtml(diary.content.substring(0, 100))}${diary.content.length > 100 ? '...' : ''}</div>
                     <button type="button" class="btn-delete" onclick="deleteDiary(event, ${diary.id})">🗑️ 삭제</button>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
         
         function toggleSort() {

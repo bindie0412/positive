@@ -1,0 +1,355 @@
+# -*- coding: utf-8 -*-
+"""
+개선된 감정 분석 및 색상 추천 모델
+서버 시작 시 로드되어 빠른 응답 제공
+"""
+
+import pandas as pd
+import numpy as np
+import pickle
+import os
+import sys
+import re
+import colorsys
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.preprocessing import LabelEncoder
+from sklearn.ensemble import RandomForestClassifier
+
+class ImprovedEmotionAnalyzer:
+    def __init__(self):
+        self.text_model = None
+        self.text_vectorizer = None
+        self.color_model = None
+        self.color_encoder = None
+        self.emotion_colors = {
+            'Happiness': {'color': '#FFD700', 'color_name': '황금색', 'tone': '밝고 파스텔 톤'},
+            'Sadness': {'color': '#4682B4', 'color_name': '파란색', 'tone': '차분하고 어두운 톤'},
+            'Anger': {'color': '#DC143C', 'color_name': '진한 빨간색', 'tone': '강렬하고 어두운 톤'},
+            'Fear': {'color': '#808080', 'color_name': '회색', 'tone': '어둡고 차분한 톤'},
+            'Disgust': {'color': '#9ACD32', 'color_name': '연한 초록색', 'tone': '차분하고 어두운 톤'},
+            'Surprise': {'color': '#FF69B4', 'color_name': '핑크색', 'tone': '밝고 파스텔 톤'}
+        }
+        self._load_models()
+    
+    def _load_models(self):
+        """서버 시작 시 모델들을 로드"""
+        print("🚀 개선된 모델 로딩 시작...")
+        
+        # 1. 텍스트 감정 분석 모델 로드
+        self._load_text_model()
+        
+        # 2. 색상 기반 감정 예측 모델 로드
+        self._load_color_model()
+        
+        print("✅ 모든 모델 로딩 완료!")
+    
+    def _load_text_model(self):
+        """텍스트 감정 분석 모델 로드 (acdt_model_v1 기반)"""
+        try:
+            # 데이터셋 로드
+            csv_path = os.path.join(os.path.dirname(__file__), 'emotion_sentimen_dataset.csv')
+            
+            if not os.path.exists(csv_path):
+                print(f"⚠️ 데이터셋 파일을 찾을 수 없습니다: {csv_path}")
+                return
+            
+            print("📊 데이터셋 로딩 중...")
+            df = pd.read_csv(csv_path, encoding='latin1')
+            
+            # 데이터 정제
+            df_renamed = df.rename(columns={'Emotion': 'label', 'text': 'text'})
+            df_clean = df_renamed[['text', 'label']].copy()
+            
+            # 텍스트 정제 (영어 전용)
+            def clean_text(text):
+                if not isinstance(text, str):
+                    return ""
+                text = text.lower()
+                text = re.sub(r'[^a-zA-Z\s]', '', text)
+                text = re.sub(r'\s+', ' ', text).strip()
+                return text
+            
+            df_clean['text'] = df_clean['text'].apply(clean_text)
+            df_clean.dropna(subset=['text', 'label'], inplace=True)
+            df_final = df_clean[df_clean['text'] != ""]
+            
+            # 라벨 매핑 (neutral 제외)
+            label_map = {
+                'happiness': 'joy', 'fun': 'joy', 'enthusiasm': 'joy', 'relief': 'joy', 'love': 'joy',
+                'sadness': 'sadness', 'empty': 'sadness', 'boredom': 'sadness',
+                'anger': 'anger',
+                'worry': 'fear',
+                'hate': 'disgust',
+                'surprise': 'surprise'
+            }
+            
+            df_final['label'] = df_final['label'].map(label_map)
+            df_final = df_final.dropna(subset=['label'])
+            
+            print(f"📈 {len(df_final)}개 샘플로 모델 학습 중...")
+            
+            # 훈련/테스트 분리
+            X = df_final['text']
+            y = df_final['label']
+            
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.2, random_state=42, stratify=y
+            )
+            
+            # TF-IDF 벡터화
+            self.text_vectorizer = TfidfVectorizer(
+                max_features=5000,
+                stop_words='english'
+            )
+            X_train_tfidf = self.text_vectorizer.fit_transform(X_train)
+            X_test_tfidf = self.text_vectorizer.transform(X_test)
+            
+            # 모델 학습
+            self.text_model = LogisticRegression(
+                max_iter=1000,
+                random_state=42,
+                class_weight='balanced'
+            )
+            self.text_model.fit(X_train_tfidf, y_train)
+            
+            # 성능 평가
+            y_pred = self.text_model.predict(X_test_tfidf)
+            accuracy = accuracy_score(y_test, y_pred)
+            print(f"📊 텍스트 모델 정확도: {accuracy * 100:.2f}%")
+            
+        except Exception as e:
+            print(f"❌ 텍스트 모델 로딩 실패: {e}")
+            self.text_model = None
+            self.text_vectorizer = None
+    
+    def _load_color_model(self):
+        """색상 기반 감정 예측 모델 로드 (colorchoosing.py 기반)"""
+        try:
+            # HSV 색상 데이터셋 로드 (your_file_name.csv)
+            csv_path = os.path.join(os.path.dirname(__file__), 'your_file_name.csv')
+            
+            if not os.path.exists(csv_path):
+                print(f"⚠️ 색상 데이터셋 파일을 찾을 수 없습니다: {csv_path}")
+                # 기본 색상 매핑만 사용
+                return
+            
+            print("🎨 색상 데이터셋 로딩 중...")
+            data = pd.read_csv(csv_path)
+            
+            # 특징과 라벨 분리
+            X = data[['h', 's', 'v']]
+            y = data['emotion']
+            
+            # 라벨 인코딩
+            self.color_encoder = LabelEncoder()
+            y_encoded = self.color_encoder.fit_transform(y)
+            
+            # 훈련/테스트 분리
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y_encoded, test_size=0.2, random_state=42
+            )
+            
+            # 모델 학습
+            self.color_model = RandomForestClassifier(n_estimators=100, random_state=42)
+            self.color_model.fit(X_train, y_train)
+            
+            # 성능 평가
+            y_pred = self.color_model.predict(X_test)
+            accuracy = accuracy_score(y_test, y_pred)
+            print(f"🎯 색상 모델 정확도: {accuracy * 100:.2f}%")
+            
+        except Exception as e:
+            print(f"❌ 색상 모델 로딩 실패: {e}")
+            self.color_model = None
+            self.color_encoder = None
+    
+    def analyze_emotion(self, text):
+        """메인 감정 분석 함수"""
+        if not isinstance(text, str) or not text.strip():
+            return 'Happiness'
+        
+        # 1. 한국어 키워드 우선 분석
+        korean_result = self._analyze_korean_emotion(text)
+        if korean_result:
+            return korean_result
+        
+        # 2. 영어 키워드 분석
+        english_result = self._analyze_english_emotion(text)
+        if english_result:
+            return english_result
+        
+        # 3. ML 모델 사용 (영어 텍스트만)
+        ml_result = self._analyze_with_ml(text)
+        if ml_result:
+            return ml_result
+        
+        # 4. 기본값
+        return 'Happiness'
+    
+    def _analyze_korean_emotion(self, text):
+        """한국어 텍스트 감정 분석"""
+        text_lower = text.lower()
+        
+        korean_emotions = {
+            'Fear': [
+                '무서워', '무섭다', '무서운', '두려워', '두려운', '겁', '겁나', '겁나는',
+                '恐慌', '소름', '소름끼치다', '무서움', '무서웠다', '무서웠다',
+                '무서워서', '무서워서', '무서워서', '무서워서', '무서워서'
+            ],
+            'Happiness': [
+                '행복', '행복해', '행복한', '좋아', '좋다', '좋은', '기쁘다', '기쁜',
+                '웃다', '웃음', '즐겁다', '즐거운', '사랑', '사랑해', '완벽', '최고',
+                '행복했다', '행복했다', '행복했다', '행복했다', '행복했다'
+            ],
+            'Sadness': [
+                '슬프다', '슬픈', '울다', '울음', '외롭다', '외로운', '우울', '상처',
+                '아프다', '아픈', '눈물', '슬픔', '울었다', '울었다', '울었다'
+            ],
+            'Anger': [
+                '화', '화나', '화나다', '짜증', '짜증나', '짜증나다', '화', '성나',
+                '미치다', '미운', '화났다', '화났다', '화났다'
+            ],
+            'Disgust': [
+                '역겹다', '역겹다', '구역', '구역하다', '역겹다', '구역'
+            ],
+            'Surprise': [
+                '놀라다', '놀라운', '충격', '깜짝', '우와', '대박', '놀랐다', '놀랐다'
+            ]
+        }
+        
+        # 키워드 매칭
+        for emotion, keywords in korean_emotions.items():
+            for keyword in keywords:
+                if keyword in text_lower:
+                    return emotion
+        
+        return None
+    
+    def _analyze_english_emotion(self, text):
+        """영어 텍스트 감정 분석"""
+        text_lower = text.lower()
+        
+        english_emotions = {
+            'Fear': [
+                'scared', 'afraid', 'worried', 'anxious', 'nervous', 'terrified',
+                'panic', 'fear', 'dread', 'horror', 'scary', 'frightened', 'frightening',
+                'strange', 'noise', 'pounding', 'cant sleep', 'cant sleep', 'sleep',
+                'shivering', 'trembling', 'uneasy', 'uncomfortable', 'threat'
+            ],
+            'Happiness': [
+                'happy', 'joy', 'glad', 'excited', 'wonderful', 'amazing', 
+                'great', 'good', 'love', 'smile', 'laugh', 'fun', 'best', 'perfect',
+                'sun', 'shining', 'aced', 'test', 'favorite', 'song', 'wonderful day'
+            ],
+            'Sadness': [
+                'sad', 'cry', 'tears', 'lonely', 'depressed', 'down', 'blue',
+                'hurt', 'pain', 'sorrow', 'grief', 'miserable', 'lonely'
+            ],
+            'Anger': [
+                'angry', 'mad', 'furious', 'rage', 'hate', 'annoyed', 'irritated',
+                'frustrated', 'outraged', 'pissed', 'livid'
+            ],
+            'Disgust': [
+                'disgusted', 'gross', 'sick', 'nauseated', 'revolted', 'repulsed',
+                'awful', 'terrible', 'horrible', 'disgusting'
+            ],
+            'Surprise': [
+                'surprised', 'shocked', 'amazed', 'astonished', 'wow',
+                'incredible', 'unexpected', 'startled', 'suddenly'
+            ]
+        }
+        
+        # 키워드 매칭 점수 계산
+        emotion_scores = {}
+        for emotion, keywords in english_emotions.items():
+            score = 0
+            for keyword in keywords:
+                if keyword in text_lower:
+                    score += 1
+                words = text_lower.split()
+                for word in words:
+                    if keyword in word or word in keyword:
+                        score += 0.5
+            emotion_scores[emotion] = score
+        
+        if emotion_scores and max(emotion_scores.values()) > 0:
+            return max(emotion_scores, key=emotion_scores.get)
+        
+        return None
+    
+    def _analyze_with_ml(self, text):
+        """ML 모델을 사용한 감정 분석"""
+        if self.text_model is not None and self.text_vectorizer is not None:
+            try:
+                # 영어 텍스트만 ML 모델에 사용
+                english_text = re.sub(r'[^a-zA-Z\s]', '', text.lower())
+                if english_text.strip() and len(english_text.split()) >= 3:
+                    text_vector = self.text_vectorizer.transform([english_text])
+                    prediction = self.text_model.predict(text_vector)[0]
+                    
+                    emotion_map = {
+                        'joy': 'Happiness',
+                        'sadness': 'Sadness',
+                        'anger': 'Anger', 
+                        'fear': 'Fear',
+                        'disgust': 'Disgust',
+                        'surprise': 'Surprise'
+                    }
+                    return emotion_map.get(prediction, 'Happiness')
+            except Exception as e:
+                print(f"ML 모델 분석 실패: {e}", file=sys.stderr)
+        
+        return None
+    
+    def get_color_recommendation(self, emotion):
+        """감정에 따른 색상 추천"""
+        if emotion in self.emotion_colors:
+            color_data = self.emotion_colors[emotion]
+            return {
+                'emotion': emotion,
+                'color_hex': color_data['color'],
+                'color_name': color_data['color_name'],
+                'tone': color_data['tone']
+            }
+        
+        # 기본값
+        return {
+            'emotion': 'Happiness',
+            'color_hex': self.emotion_colors['Happiness']['color'],
+            'color_name': self.emotion_colors['Happiness']['color_name'],
+            'tone': self.emotion_colors['Happiness']['tone']
+        }
+    
+    def analyze_emotion_and_color(self, diary_entry, show_visualization=False):
+        """메인 분석 함수"""
+        emotion = self.analyze_emotion(diary_entry)
+        result = self.get_color_recommendation(emotion)
+        print(f"🤖 AI 분석: {emotion}")
+        return result
+
+# 전역 인스턴스
+improved_analyzer = ImprovedEmotionAnalyzer()
+
+def analyze_emotion_and_color(diary_entry, show_visualization=False):
+    """외부에서 호출할 함수"""
+    return improved_analyzer.analyze_emotion_and_color(diary_entry, show_visualization)
+
+if __name__ == "__main__":
+    # 테스트
+    test_cases = [
+        "I heard a strange noise outside my window late tonight. My heart is pounding and I cant sleep.",
+        "I watched very scary movie. and I was so scared...",
+        "The sun is shining, I aced the test, and my favorite song just came on. What a perfect day.",
+        "무서운 영화 봤어",
+        "너무 행복해"
+    ]
+    
+    print("🧪 개선된 모델 테스트:")
+    for text in test_cases:
+        result = analyze_emotion_and_color(text)
+        print(f"텍스트: {text[:50]}...")
+        print(f"결과: {result}")
+        print()

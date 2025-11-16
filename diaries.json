@@ -45,15 +45,15 @@
     "created_at": "2025-11-16 18:03:43"
   },
   {
-    "id": 1763287349615,
+    "id": 1763288210784,
     "date": "2025-11-16",
     "title": "1",
-    "content": "I heard the news about the canceled trip. It’s hard to stay optimistic right now.",
+    "content": "heard the news about the canceled trip. It’s hard to stay optimistic right now.",
     "mood": "",
-    "emotion": "",
-    "color_hex": "#667eea",
-    "color_name": "파란색",
-    "tone": "기본 톤",
-    "created_at": "2025-11-16 19:02:29"
+    "emotion": "Fear",
+    "color_hex": "#808080",
+    "color_name": "회색",
+    "tone": "어둡고 차분한 톤",
+    "created_at": "2025-11-16 19:16:50"
   }
 ]

@@ -10,16 +10,24 @@ import os
 import json
 import time
 
-# our_model 폴더의 simple_emotion_model.py에서 함수 임포트
+# our_model 폴더의 improved_emotion_model.py에서 함수 임포트
 sys.path.append(os.path.join(os.path.dirname(__file__), 'our_model'))
 
 try:
-    from simple_emotion_model import analyze_emotion_and_color
+    from improved_emotion_model import analyze_emotion_and_color
     AI_MODEL_AVAILABLE = True
-    print("AI 모델 로딩 성공!")
+    print("🤖 개선된 AI 모델 로딩 성공!")
 except Exception as e:
-    print(f"AI 모델 로딩 실패: {e}")
-    AI_MODEL_AVAILABLE = False
+    print(f"❌ 개선된 AI 모델 로딩 실패: {e}")
+    # 폴백: 기존 simple_emotion_model 사용
+    try:
+        from simple_emotion_model import analyze_emotion_and_color as fallback_analyze
+        analyze_emotion_and_color = fallback_analyze
+        AI_MODEL_AVAILABLE = True
+        print("🔄 폴백 모델 사용")
+    except Exception as e2:
+        print(f"❌ 폴백 모델도 실패: {e2}")
+        AI_MODEL_AVAILABLE = False
 
 app = Flask(__name__)
 CORS(app)  # CORS 설정 - 다른 도메인에서의 요청 허용
