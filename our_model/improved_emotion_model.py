@@ -11,6 +11,7 @@ import os
 import sys
 import re
 import colorsys
+import random
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
@@ -32,6 +33,9 @@ class ImprovedEmotionAnalyzer:
             'Disgust': {'color': '#9ACD32', 'color_name': '연한 초록색', 'tone': '차분하고 어두운 톤'},
             'Surprise': {'color': '#FF69B4', 'color_name': '핑크색', 'tone': '밝고 파스텔 톤'}
         }
+        # 색상 데이터셋 저장
+        self.color_dataset = None
+        self.emotion_colors_data = {}
         self._load_models()
     
     def _load_models(self):
@@ -44,7 +48,39 @@ class ImprovedEmotionAnalyzer:
         # 2. 색상 기반 감정 예측 모델 로드
         self._load_color_model()
         
+        # 3. 색상 데이터셋 로드 (랜덤 색상 추출용)
+        self._load_color_dataset()
+        
         print("✅ 모든 모델 로딩 완료!")
+    
+    def _load_color_dataset(self):
+        """색상 데이터셋 로드 (랜덤 색상 추출용)"""
+        try:
+            csv_path = os.path.join(os.path.dirname(__file__), 'your_file_name.csv')
+            
+            if not os.path.exists(csv_path):
+                print(f"⚠️ 색상 데이터셋 파일을 찾을 수 없습니다: {csv_path}")
+                return
+            
+            print("🎨 색상 데이터셋 로딩 중...")
+            self.color_dataset = pd.read_csv(csv_path)
+            
+            # 에러 데이터 제외
+            self.color_dataset = self.color_dataset[self.color_dataset['is_error'] == False]
+            
+            # 감정별로 색상 데이터 그룹화
+            for emotion in self.color_dataset['emotion'].unique():
+                emotion_data = self.color_dataset[self.color_dataset['emotion'] == emotion]
+                self.emotion_colors_data[emotion] = emotion_data[['h', 's', 'v']].values
+            
+            print(f"📊 색상 데이터셋 로드 완료: {len(self.color_dataset)}개 샘플")
+            for emotion, data in self.emotion_colors_data.items():
+                print(f"   {emotion}: {len(data)}개 색상")
+                
+        except Exception as e:
+            print(f"❌ 색상 데이터셋 로딩 실패: {e}")
+            self.color_dataset = None
+            self.emotion_colors_data = {}
     
     def _load_text_model(self):
         """텍스트 감정 분석 모델 로드 (acdt_model_v1 기반)"""
@@ -304,24 +340,91 @@ class ImprovedEmotionAnalyzer:
         
         return None
     
-    def get_color_recommendation(self, emotion):
-        """감정에 따른 색상 추천"""
+    def hsv_to_hex(self, h, s, v):
+        """HSV를 HEX 색상으로 변환"""
+        r, g, b = colorsys.hsv_to_rgb(h, s, v)
+        return f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}"
+    
+    def get_color_from_dataset(self, emotion):
+        """데이터셋에서 해당 감정의 색상을 랜덤으로 추출"""
+        if self.emotion_colors_data and emotion in self.emotion_colors_data:
+            # 해당 감정의 색상 중에서 랜덤으로 하나 선택
+            color_data = self.emotion_colors_data[emotion]
+            if len(color_data) > 0:
+                selected_hsv = random.choice(color_data)
+                h, s, v = selected_hsv
+                
+                # 감정 톤에 따른 색상 보정
+                corrected_hsv = self._adjust_color_tone(h, s, v, emotion)
+                
+                # HEX 색상으로 변환
+                hex_color = self.hsv_to_hex(*corrected_hsv)
+                
+                return {
+                    'hsv': corrected_hsv,
+                    'hex': hex_color,
+                    'from_dataset': True
+                }
+        
+        # 데이터셋에 없으면 기본 색상 사용
         if emotion in self.emotion_colors:
-            color_data = self.emotion_colors[emotion]
+            default_color = self.emotion_colors[emotion]['color']
             return {
-                'emotion': emotion,
-                'color_hex': color_data['color'],
-                'color_name': color_data['color_name'],
-                'tone': color_data['tone']
+                'hsv': None,
+                'hex': default_color,
+                'from_dataset': False
             }
         
-        # 기본값
+        # 최종 폴백
         return {
-            'emotion': 'Happiness',
-            'color_hex': self.emotion_colors['Happiness']['color'],
-            'color_name': self.emotion_colors['Happiness']['color_name'],
-            'tone': self.emotion_colors['Happiness']['tone']
+            'hsv': None,
+            'hex': '#FFD700',
+            'from_dataset': False
         }
+    
+    def _adjust_color_tone(self, h, s, v, emotion):
+        """감정에 따른 색상 톤 보정"""
+        # 부정적인 감정과 긍정적인 감정 정의
+        negative_emotions = ['Anger', 'Disgust', 'Fear', 'Sadness']
+        positive_emotions = ['Happiness', 'Surprise']
+        
+        if emotion in negative_emotions:
+            # 어둡고 차분한 톤으로 보정
+            adjusted_s = max(0.2, min(0.7, s * 0.7))
+            adjusted_v = max(0.2, min(0.6, v * 0.6))
+        elif emotion in positive_emotions:
+            # 밝고 파스텔 톤으로 보정
+            adjusted_s = max(0.1, min(0.4, s * 0.5))
+            adjusted_v = max(0.8, min(1.0, v * 0.2 + 0.8))
+        else:
+            # 기본 보정
+            adjusted_s = max(0.1, min(0.8, s))
+            adjusted_v = max(0.3, min(1.0, v))
+        
+        return (h, adjusted_s, adjusted_v)
+    
+    def get_color_name_from_hsv(self, h, s, v):
+        """HSV 값에서 색상 이름 추출 (간단한 버전)"""
+        # HSV를 RGB로 변환
+        r, g, b = colorsys.hsv_to_rgb(h, s, v)
+        
+        # RGB 값을 기반으로 색상 이름 결정
+        if r > 0.8 and g > 0.8 and b < 0.3:
+            return "노란색"
+        elif r > 0.7 and g < 0.3 and b < 0.3:
+            return "빨간색"
+        elif r < 0.3 and g > 0.7 and b < 0.3:
+            return "초록색"
+        elif r < 0.3 and g < 0.3 and b > 0.7:
+            return "파란색"
+        elif r > 0.7 and g < 0.5 and b > 0.7:
+            return "핑크색"
+        elif r < 0.3 and g < 0.3 and b < 0.3:
+            return "회색"
+        elif r > 0.5 and g > 0.5 and b > 0.5:
+            return "밝은 색"
+        else:
+            return "중간 톤"
     
     def analyze_emotion_and_color(self, diary_entry, show_visualization=False):
         """메인 분석 함수"""
@@ -329,6 +432,52 @@ class ImprovedEmotionAnalyzer:
         result = self.get_color_recommendation(emotion)
         print(f"🤖 AI 분석: {emotion}")
         return result
+    
+    def get_color_recommendation(self, emotion):
+        """감정에 따른 색상 추천 (데이터셋 기반 랜덤 추출)"""
+        # 데이터셋에서 해당 감정의 색상 랜덤 추출
+        color_info = self.get_color_from_dataset(emotion)
+        
+        if color_info['from_dataset'] and color_info['hsv']:
+            # 데이터셋에서 추출한 색상 사용
+            h, s, v = color_info['hsv']
+            color_name = self.get_color_name_from_hsv(h, s, v)
+            
+            # 감정 톤 결정
+            negative_emotions = ['Anger', 'Disgust', 'Fear', 'Sadness']
+            if emotion in negative_emotions:
+                tone = "차분하고 어두운 톤"
+            else:
+                tone = "밝고 파스텔 톤"
+            
+            return {
+                'emotion': emotion,
+                'color_hex': color_info['hex'],
+                'color_name': color_name,
+                'tone': tone,
+                'source': 'dataset'
+            }
+        else:
+            # 기본 색상 사용 (폴백)
+            if emotion in self.emotion_colors:
+                color_data = self.emotion_colors[emotion]
+                return {
+                    'emotion': emotion,
+                    'color_hex': color_data['color'],
+                    'color_name': color_data['color_name'],
+                    'tone': color_data['tone'],
+                    'source': 'default'
+                }
+            
+            # 최종 폴백
+            return {
+                'emotion': 'Happiness',
+                'color_hex': self.emotion_colors['Happiness']['color'],
+                'color_name': self.emotion_colors['Happiness']['color_name'],
+                'tone': self.emotion_colors['Happiness']['tone'],
+                'source': 'fallback'
+            }
+        
 
 # 전역 인스턴스
 improved_analyzer = ImprovedEmotionAnalyzer()

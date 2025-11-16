@@ -55,5 +55,77 @@
     "color_name": "회색",
     "tone": "어둡고 차분한 톤",
     "created_at": "2025-11-16 19:16:50"
+  },
+  {
+    "id": 1763288514830,
+    "date": "2025-11-16",
+    "title": "2",
+    "content": "heard the news about the canceled trip. It’s hard to stay optimistic right now.",
+    "mood": "",
+    "emotion": "",
+    "color_hex": "#667eea",
+    "color_name": "파란색",
+    "tone": "기본 톤",
+    "created_at": "2025-11-16 19:21:54"
+  },
+  {
+    "id": 1763288534997,
+    "date": "2025-11-16",
+    "title": "3",
+    "content": "heard the news about the canceled trip. It’s hard to stay optimistic right now.",
+    "mood": "",
+    "emotion": "Fear",
+    "color_hex": "#33262c",
+    "color_name": "회색",
+    "tone": "차분하고 어두운 톤",
+    "created_at": "2025-11-16 19:22:14"
+  },
+  {
+    "id": 1763288539757,
+    "date": "2025-11-16",
+    "title": "1",
+    "content": "heard the news about the canceled trip. It’s hard to stay optimistic right now.",
+    "mood": "",
+    "emotion": "",
+    "color_hex": "#667eea",
+    "color_name": "파란색",
+    "tone": "기본 톤",
+    "created_at": "2025-11-16 19:22:19"
+  },
+  {
+    "id": 1763288544999,
+    "date": "2025-11-16",
+    "title": "1",
+    "content": "heard the news about the canceled trip. It’s hard to stay optimistic right now.",
+    "mood": "",
+    "emotion": "Fear",
+    "color_hex": "#2c3328",
+    "color_name": "회색",
+    "tone": "차분하고 어두운 톤",
+    "created_at": "2025-11-16 19:22:24"
+  },
+  {
+    "id": 1763288901048,
+    "date": "2025-11-16",
+    "title": "3",
+    "content": "Reading about that politician’s scandal made me feel truly sick to my stomach. It’s repulsive.",
+    "mood": "",
+    "emotion": "Anger",
+    "color_hex": "#67272f",
+    "color_name": "중간 톤",
+    "tone": "차분하고 어두운 톤",
+    "created_at": "2025-11-16 19:28:21"
+  },
+  {
+    "id": 1763288918625,
+    "date": "2025-11-16",
+    "title": "65",
+    "content": "My old best friend, who moved away years ago, showed up at my door. Total shock!",
+    "mood": "",
+    "emotion": "Happiness",
+    "color_hex": "#f1de90",
+    "color_name": "밝은 색",
+    "tone": "밝고 파스텔 톤",
+    "created_at": "2025-11-16 19:28:38"
   }
 ]

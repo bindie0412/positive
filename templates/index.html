@@ -328,17 +328,61 @@
             const date = document.getElementById('diaryDate').value;
             const title = document.getElementById('diaryTitle').value;
             const content = document.getElementById('diaryContent').value;
+            
+            // 현재 표시된 감정 분석 결과가 없으면 새로 분석
             let emotion = '';
             let colorHex = '#667eea';
             let colorName = '파란색';
             let tone = '기본 톤';
+            
             if (document.getElementById('emotionAnalysis').style.display !== 'none') {
                 emotion = document.getElementById('analyzedEmotion').textContent;
                 colorHex = document.getElementById('colorCode').textContent;
                 colorName = document.getElementById('colorName').textContent;
                 tone = document.getElementById('colorTone').textContent;
+            } else {
+                // 감정 분석이 없는 경우 저장 시점에서 한 번만 분석
+                console.log('저장 시점에서 감정 분석 수행...');
+                fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({text: content})
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        emotion = data.emotion;
+                        colorHex = data.color_hex;
+                        colorName = data.color_name;
+                        tone = data.tone;
+                        console.log(`분석 결과: ${emotion} - ${colorHex}`);
+                        saveDiaryWithFixedColor(date, title, content, emotion, colorHex, colorName, tone);
+                    } else {
+                        saveDiaryWithFixedColor(date, title, content, emotion, colorHex, colorName, tone);
+                    }
+                })
+                .catch(error => {
+                    console.error('감정 분석 실패:', error);
+                    saveDiaryWithFixedColor(date, title, content, emotion, colorHex, colorName, tone);
+                });
+                return; // 비동기 처리를 위해 여기서 반환
             }
-            const diaryData = {date, title, content, emotion, color_hex: colorHex, color_name: colorName, tone};
+            
+            // 감정 분석 결과가 이미 있으면 바로 저장
+            saveDiaryWithFixedColor(date, title, content, emotion, colorHex, colorName, tone);
+        }
+        
+        function saveDiaryWithFixedColor(date, title, content, emotion, colorHex, colorName, tone) {
+            const diaryData = {
+                date, 
+                title, 
+                content, 
+                emotion, 
+                color_hex: colorHex, 
+                color_name: colorName, 
+                tone
+            };
+            
             fetch('/api/save-diary', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -353,7 +397,10 @@
                 document.getElementById('diaryDate').value = today;
                 loadDiaries();
             })
-            .catch(error => alert('저장 실패'));
+            .catch(error => {
+                console.error('저장 실패:', error);
+                alert('저장 실패');
+            });
         }
         
         function deleteDiary(event, id) {
