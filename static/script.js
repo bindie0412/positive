@@ -30,25 +30,12 @@ class DiaryApp {
             if (e.target === modal) this.closeModal();
         });
 
-        // 일기 내용 입력 시 자동 감정 분석
-        document.getElementById('diaryContent').addEventListener('input', (e) => {
-            this.debounceAnalyzeEmotion(e.target.value, 2000); // 2초 후 분석
-        });
+        // 일기 내용 입력 시 자동 감정 분석 제거 (저장 버튼 클릭 시 실행으로 변경)
     }
 
     setTodayDate() {
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('diaryDate').value = today;
-    }
-
-    // 디바운스 함수 (연속 입력 시 마지막 입력 후에만 실행)
-    debounceAnalyzeEmotion(text, delay) {
-        clearTimeout(this.analyzeTimeout);
-        this.analyzeTimeout = setTimeout(() => {
-            if (text.trim().length > 10) { // 10자 이상일 때만 분석
-                this.analyzeEmotion(text);
-            }
-        }, delay);
     }
 
     async analyzeEmotion(text) {
@@ -99,7 +86,22 @@ class DiaryApp {
         const content = document.getElementById('diaryContent').value;
         const mood = document.getElementById('diaryMood').value;
 
-        // AI 분석 결과가 있는지 확인
+        // 내용이 비어있는지 확인
+        if (!content.trim()) {
+            this.showMessage('일기 내용을 입력해주세요.', 'error');
+            return;
+        }
+
+        // 저장 버튼 클릭 시 감정 분석 실행
+        try {
+            await this.analyzeEmotion(content);
+        } catch (error) {
+            console.error('감정 분석 중 오류:', error);
+            this.showMessage('감정 분석 중 오류가 발생했습니다.', 'error');
+            return;
+        }
+
+        // AI 분석 결과 가져오기
         const aiAnalysis = document.getElementById('aiAnalysis');
         let emotion = '';
         let colorHex = '';
